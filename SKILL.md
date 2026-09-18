@@ -33,7 +33,7 @@ intention into states someone can point at.
 
 This skill ships with support files, installed alongside it:
 
-- `scripts/north_star.py` - the tool. Every command below runs this.
+- [scripts/north_star.py](scripts/north_star.py) - the tool. Every command below runs this.
 - `scripts/smoke_test.py` - its own tests, and the assertions behind this document.
 - `templates/star.example.json` - a star that passes, to start from.
 - `references/star-format.md` - the field reference and every refusal rule.
