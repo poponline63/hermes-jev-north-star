@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+.north-star/
+.DS_Store

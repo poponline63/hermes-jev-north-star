@@ -1,0 +1,32 @@
+{
+  "goal": "a stranger can install the CLI, run it against their own data, and get a correct report without asking anyone for help",
+  "for_whom": "someone who found the repo today and has never spoken to the maintainer",
+  "requirements": [
+    "the documented install command works on a clean machine",
+    "the example in the README runs against the shipped sample data and prints a report",
+    "a wrong input produces a clear error instead of a traceback",
+    "the release page carries the same version the README names"
+  ],
+  "checks": {
+    "the documented install command works on a clean machine": "run the install line from the README in a fresh container and paste the output",
+    "the example in the README runs against the shipped sample data and prints a report": "copy-paste the README example verbatim and compare its output to the sample report in docs/",
+    "a wrong input produces a clear error instead of a traceback": "run the CLI against a malformed file and read the last line it prints",
+    "the release page carries the same version the README names": "compare the version string in the README with the tag on the newest release"
+  },
+  "out_of_scope": [
+    "packaging for other operating systems",
+    "a hosted version of the tool",
+    "performance work of any kind"
+  ],
+  "stop_rule": "stop when all four are demonstrably true; hand back before changing anything a user's data depends on",
+  "first_action": "run the README install line in a container and record exactly what it prints",
+  "ground_truth": [
+    "repo: github.com/<owner>/<project>, branch main",
+    "the sample data is committed at examples/sample.csv and never regenerated",
+    "the version lives in one place: pyproject.toml",
+    "release tags are the only source of truth for what shipped"
+  ],
+  "gates": [
+    "python3 -m compileall -q src"
+  ]
+}
