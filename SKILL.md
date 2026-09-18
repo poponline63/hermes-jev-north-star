@@ -29,6 +29,15 @@ A star is not a theme. "Make it polished" cannot be judged, so the loop that rea
 a next action and the gate can never honestly say done. The whole job here is to turn an
 intention into states someone can point at.
 
+## Files
+
+This skill ships with support files, installed alongside it:
+
+- `scripts/north_star.py` - the tool. Every command below runs this.
+- `scripts/smoke_test.py` - its own tests, and the assertions behind this document.
+- `templates/star.example.json` - a star that passes, to start from.
+- `references/star-format.md` - the field reference and every refusal rule.
+
 ## Commands
 
 `<skill>` is the directory holding this file (commonly `~/.hermes/skills/hermes-north-star`).

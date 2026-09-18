@@ -17,8 +17,11 @@ Not an official Nous Research project.
 ## Install
 
 ```bash
-hermes skills install poponline63/hermes-north-star
+hermes skills install https://raw.githubusercontent.com/poponline63/hermes-north-star/main/SKILL.md
 ```
+
+(That form is the one Hermes installs from: a direct SKILL.md URL, which brings the skill and the
+support files it names. `hermes skills inspect <same url>` previews it first.)
 
 Then in a chat session:
 
