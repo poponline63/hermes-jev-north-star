@@ -52,7 +52,59 @@ TOOL = Path(__file__).resolve()
 
 
 def tool_cmd(*args: str) -> str:
-    return "python3 " + " ".join([f'"{TOOL.as_posix()}"', *args])
+    return " ".join([f'"{Path(sys.executable).as_posix()}"', f'"{TOOL.as_posix()}"', *args])
+
+
+def judge_script() -> Path:
+    return TOOL.parent / "jev_judge.py"
+
+
+def judge_cmd() -> str:
+    """The judge is its own script, not a subcommand of this one."""
+    return " ".join([f'"{Path(sys.executable).as_posix()}"',
+                     f'"{judge_script().as_posix()}"'])
+
+
+def jev_available() -> bool:
+    """Is a TypeSafe key configured? Asked in-process: a subprocess probe depends on how the
+    local shell resolves `python3`, which is exactly the kind of thing that fails quietly."""
+    script = judge_script()
+    if not script.exists():
+        return False
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("north_star_jev_judge", script)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        return bool(module.api_key())
+    except Exception:
+        return False
+
+
+def resolve_judge(value: Optional[str]) -> Tuple[Optional[str], str]:
+    """Turn a judge name into a command. Returns (command, note).
+
+    "jev"  the bundled Jev judge (TypeSafe System One).
+    "auto" Jev when a key is configured, otherwise no judge at all.
+    Anything else is already a command.
+    """
+    value = (value or "").strip()
+    if not value:
+        return None, ""
+    if value not in ("jev", "auto"):
+        return value, ""
+    script = judge_script()
+    if not script.exists():
+        if value == "jev":
+            raise SystemExit(f"the bundled Jev judge is missing: {script}")
+        return None, ""
+    command = judge_cmd()
+    if value == "jev":
+        return command, ""
+    if jev_available():
+        return command, ""
+    return None, ("No TypeSafe API key is configured, so no judge was used. Set "
+                  "TYPESAFE_API_KEY to have Jev rank the requirements.")
 
 
 # ── storage ───────────────────────────────────────────────────────────────
@@ -256,7 +308,7 @@ def run_shell_gates(commands: List[str], cwd: Optional[str] = None,
 
 
 def run_judge(command: str, name: str, star: Dict[str, Any], state_text: str,
-              timeout_s: int = 600) -> Tuple[Optional[bool], str, str]:
+              timeout_s: int = 600) -> Tuple[Optional[bool], str, Dict[str, Any], str]:
     """Ask a judge command whether the goal is met.
 
     The judge gets the star and the state as JSON on stdin. It answers on stdout with
@@ -274,29 +326,35 @@ def run_judge(command: str, name: str, star: Dict[str, Any], state_text: str,
                               capture_output=True, text=True, encoding="utf-8",
                               errors="replace", timeout=timeout_s)
     except subprocess.TimeoutExpired:
-        return None, "", f"the judge timed out after {timeout_s}s"
+        return None, "", {}, f"the judge timed out after {timeout_s}s"
     out = (proc.stdout or "").strip()
-    met, weakest, intended = parse_judge_output(out)
+    met, weakest, intended, extra = parse_judge_output(out)
     if met is None:
         if intended:
             # It tried to answer and the answer is unreadable. Fail closed rather than
             # reading a broken verdict as agreement.
-            return None, "", f"the judge's output is not a readable verdict: {out[-400:]}"
+            return None, "", {}, f"the judge's output is not a readable verdict: {out[-400:]}"
         if out:
-            return None, "", ("the judge printed text but no verdict. Expected "
-                              '{"met": true|false, "weakest": "..."} on stdout. A bare exit '
-                              f"code is only honoured when the judge prints nothing: {out[-400:]}")
+            return None, "", {}, ("the judge printed text but no verdict. Expected "
+                                  '{"met": true|false, "weakest": "..."} on stdout. A bare exit '
+                                  f"code is only honoured when the judge prints nothing: {out[-400:]}")
         if proc.returncode not in (0, 1):
-            return None, "", f"the judge exited {proc.returncode}: {out[-400:]}"
+            stderr = (proc.stderr or "").strip()[-400:]
+            return None, "", {}, f"the judge exited {proc.returncode}: {stderr or out or 'no output'}"
         met = proc.returncode == 0
-    return met, weakest, ""
+    return met, weakest, extra, ""
 
 
-def parse_judge_output(out: str) -> Tuple[Optional[bool], str, bool]:
-    """Read a judge's answer. Returns (met, weakest, intended_to_answer)."""
+def parse_judge_output(out: str) -> Tuple[Optional[bool], str, bool, Dict[str, Any]]:
+    """Read a judge's answer. Returns (met, weakest, intended_to_answer, everything_else).
+
+    Extra keys are kept rather than dropped: a judge that reports why it decided (a done
+    probability, a confidence, a model name) should have that shown, not hidden behind a
+    boolean.
+    """
     out = (out or "").strip()
     if not out:
-        return None, "", False
+        return None, "", False, {}
     candidates = [out]
     if "{" in out and "}" in out:
         candidates.append(out[out.index("{"):out.rindex("}") + 1])
@@ -306,12 +364,34 @@ def parse_judge_output(out: str) -> Tuple[Optional[bool], str, bool]:
         except ValueError:
             continue
         if isinstance(parsed, dict):
+            extra = {k: v for k, v in parsed.items() if k not in ("met", "weakest")}
             if "met" in parsed:
-                return bool(parsed.get("met")), str(parsed.get("weakest") or ""), True
-            return None, "", True
+                return bool(parsed.get("met")), str(parsed.get("weakest") or ""), True, extra
+            return None, "", True, extra
     if re.search(r"[\"']?met[\"']?\s*[:=]", out, re.IGNORECASE):
-        return None, "", True
-    return None, "", False
+        return None, "", True, {}
+    return None, "", False, {}
+
+
+def judge_line(extra: Dict[str, Any]) -> str:
+    """One line saying how the judge reached its answer, never just a boolean."""
+    if not extra:
+        return ""
+    bits = []
+    if extra.get("done") is not None:
+        need = extra.get("done_needs")
+        bits.append(f"done {extra['done']}" + (f" (needs {need})" if need is not None else ""))
+    if extra.get("progress") is not None:
+        bits.append(f"progress {extra['progress']}")
+    confidence = extra.get("confidence") or {}
+    if isinstance(confidence, dict) and confidence.get("done") is not None:
+        bits.append(f"confidence {confidence['done']}")
+    if extra.get("model"):
+        bits.append(str(extra["model"]))
+    usage = extra.get("usage") or {}
+    if isinstance(usage, dict) and usage.get("input_tokens"):
+        bits.append(f"{usage['input_tokens']}+{usage.get('output_tokens', 0)} tokens")
+    return ("Judge: " + ", ".join(bits) + "\n") if bits else ""
 
 
 def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
@@ -349,8 +429,10 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
 
     requirements = star.get("requirements") or []
     weakest = ""
+    judge, judge_note = resolve_judge(judge)
+    extra: Dict[str, Any] = {}
     if judge:
-        met, weakest, error = run_judge(judge, name, star, state_text, timeout_s=timeout_s)
+        met, weakest, extra, error = run_judge(judge, name, star, state_text, timeout_s=timeout_s)
         if error:
             # A gate that cannot reach its judge must never pass silently.
             text = (f"The gate could not reach its judge, so it is not claiming done.\n{error}\n"
@@ -358,9 +440,10 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
             return {"ok": False, "exit_code": 1, "gate": "judge", "verdict": "continue",
                     "text": text, "next_prompt": text}
         if met:
-            text = f"DONE: {star.get('goal')}\nEvidence file: {state_path(name)}"
+            text = (f"DONE: {star.get('goal')}\n{judge_line(extra)}"
+                    f"Evidence file: {state_path(name)}")
             return {"ok": True, "exit_code": 0, "gate": "judge", "verdict": "done", "text": text,
-                    "next_prompt": ""}
+                    "judge": extra, "next_prompt": ""}
     else:
         # No judge: the gate can prove nothing about the fuzzy requirements, so it does not
         # pretend the goal is met. It points at the work instead.
@@ -371,8 +454,11 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
     check = (star.get("checks") or {}).get(weakest) or "(no check recorded)"
     lines = [f"Goal not met: {star.get('goal')}"]
     if not judge:
-        lines.append("No judge is configured (--judge), so nothing here ranks the requirements. "
+        lines.append(judge_note or
+                     "No judge is configured (--judge), so nothing here ranks the requirements. "
                      "Take the first one that is not proven yet.")
+    elif extra:
+        lines.append(judge_line(extra).strip())
     if weakest:
         label = "Weakest requirement" if judge else "Start with"
         lines.append(f"{label}: {weakest}")
@@ -383,7 +469,8 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
                  f"{len(state_text.splitlines())} line(s).")
     text = "\n".join(lines)
     return {"ok": True, "exit_code": 1, "gate": "judge" if judge else "state",
-            "verdict": "continue", "weakest": weakest, "text": text, "next_prompt": text}
+            "verdict": "continue", "weakest": weakest, "judge": extra, "text": text,
+            "next_prompt": text}
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────
@@ -520,10 +607,10 @@ def cmd_evidence(args: argparse.Namespace) -> int:
 
 
 def cmd_gate(args: argparse.Namespace) -> int:
+    judge = None if args.no_judge else (args.judge or os.environ.get("NORTH_STAR_JUDGE") or "auto")
     result = run_gate(args.name, args.state or (Path(args.state_file).read_text(encoding="utf-8")
                                                 if args.state_file else ""),
-                      judge=args.judge or os.environ.get("NORTH_STAR_JUDGE"),
-                      cwd=args.cwd, timeout_s=args.timeout)
+                      judge=judge, cwd=args.cwd, timeout_s=args.timeout)
     if args.json:
         print(json.dumps(result, indent=2, ensure_ascii=False))
     else:
@@ -590,8 +677,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("name")
     p.add_argument("--state", help="the state to judge as a literal string")
     p.add_argument("--state-file", dest="state_file", help="the state to judge, from a file")
-    p.add_argument("--judge", help="a command that decides {'met': bool, 'weakest': str}; "
-                                   "defaults to $NORTH_STAR_JUDGE")
+    p.add_argument("--judge", default=None,
+                   help="a command that decides {'met': bool, 'weakest': str}; 'jev' for the "
+                        "bundled Jev judge, 'auto' (default) for Jev when a key is configured. "
+                        "Falls back to $NORTH_STAR_JUDGE")
+    p.add_argument("--no-judge", dest="no_judge", action="store_true",
+                   help="deterministic checks and the evidence file only, no model")
     p.add_argument("--cwd", help="working directory for the gate commands")
     p.add_argument("--timeout", type=int, default=600, help="seconds per gate/judge command")
     p.add_argument("--json", action="store_true")

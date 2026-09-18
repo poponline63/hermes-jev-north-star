@@ -1,7 +1,7 @@
 ---
-name: hermes-north-star
-description: Use when a project needs a north star, a finish line, or a definition of done. Interviews the owner one question at a time, saves a star the run can be judged against, and generates the goal prompt to hand the run.
-version: 1.0.0
+name: hermes-jev-north-star
+description: Use when a project needs a north star, a finish line, or a definition of done. Interviews the owner one question at a time, saves a star the run can be judged against, generates the goal prompt to hand the run, and gives Jev the fuzzy requirements to judge.
+version: 1.1.0
 metadata:
   hermes:
     tags: [planning, goals, autonomy, verification, definition-of-done]
@@ -39,13 +39,15 @@ intention into states someone can point at.
   tool is there:
 
 ```bash
-git clone https://github.com/poponline63/hermes-north-star ~/hermes-north-star
-python3 ~/hermes-north-star/scripts/north_star.py --help
+git clone https://github.com/poponline63/hermes-jev-north-star ~/hermes-jev-north-star
+python3 ~/hermes-jev-north-star/scripts/north_star.py --help
 ```
 
 Everywhere below, `<tool>` means whichever path is real for your install. The tests are
-`scripts/smoke_test.py`, the starting template is `templates/star.example.json`, and the field
-reference is `references/star-format.md`.
+`scripts/smoke_test.py` (77 checks, no key, no network), the judge is `scripts/jev_judge.py`, the
+starting template is `templates/star.example.json`, and the reference is
+`references/star-format.md`. Source and issues:
+<https://github.com/poponline63/hermes-jev-north-star>.
 
 ## Commands
 
@@ -153,6 +155,35 @@ The judge runs through a shell, so quote paths that contain spaces:
 `--judge "\"/path with spaces/python\" judge.py"`. If the judge cannot be launched, the gate says
 so and returns not-met rather than passing.
 
+### Jev is the default judge
+
+When a `TYPESAFE_API_KEY` is configured (`~/.hermes/.env` counts), the gate uses the bundled Jev
+judge without being asked, because the fuzzy requirement is exactly the part a script cannot read:
+
+```bash
+python3 <tool> gate <name>              # Jev when a key exists, deterministic when it does not
+python3 <tool> gate <name> --judge jev  # insist on Jev, fail closed if it cannot answer
+python3 <tool> gate <name> --no-judge   # no model at all, and it says so
+```
+
+One Jev call (`scripts/jev_judge.py`) asks three typed questions about the run's evidence: is every
+requirement met (`noul`), how far along is this on four levels (`score`), and which requirement is
+furthest from being met (`choice`). The gate prints what it got back, never just a boolean:
+
+```
+Judge: done 0.02 (needs 0.6), progress 1.05, confidence 0.96, jev-1.13.0, 921+176 tokens
+Weakest requirement: a play-driven buy fills in a funded account
+```
+
+Two honest limits, both learned by measuring it on a real project:
+
+- Its numbers move between calls on the same state, and on an empty state it once answered "nothing
+  material, every requirement looks met" beside a done probability of 0.14. The empty-state refusal
+  exists because of that, and the deterministic checks are the load-bearing part of the gate.
+- Each gate run with Jev costs one API call. `--no-judge` exists so a run can poll the gate
+  cheaply, and the environment knobs (`JEV_THRESHOLD`, `JEV_MODEL`, `JEV_TIMEOUT`,
+  `TYPESAFE_BASE_URL`) are documented at the top of `scripts/jev_judge.py`.
+
 In Hermes, the core goal loop runs a gate as a static shell command with no stdin, which is why
 the evidence lives in a file the running turn keeps updating:
 
@@ -161,6 +192,9 @@ the evidence lives in a file the running turn keeps updating:
 ```
 
 ## Pitfalls
+
+- **Trusting the judge with the parts a script can check.** Deterministic `gates` run first for a
+  reason: a shell command cannot be talked out of its answer.
 
 - **The star drifts from the prompt.** Never hand-edit a generated prompt. Edit the star and run
   `prompt` again.
@@ -180,4 +214,8 @@ the evidence lives in a file the running turn keeps updating:
   command.
 - `gate <name>` exits 1 with an empty evidence file and names the weakest requirement once the
   file has a line in it.
+- `gate <name> --judge jev` with no key exits 1 and says the judge could not be reached, instead of
+  quietly returning a deterministic verdict.
+- `scripts/smoke_test.py` runs the whole suite against a stand-in endpoint, so it needs no key and
+  makes no network calls.
 - `templates/star.example.json` passes `check --file`.

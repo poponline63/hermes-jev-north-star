@@ -1,23 +1,31 @@
-# hermes-north-star
+# hermes-jev-north-star
 
 A [Hermes Agent](https://github.com/NousResearch/hermes-agent) skill that turns an intention into
-a finish line an agent can be held to, then generates the prompt that starts the run.
+a finish line an agent can be held to, generates the prompt that starts the run, and then lets
+[Jev](https://typesafe.ai) decide whether the fuzzy requirements are really met.
 
 Long autonomous runs fail in one of two ways: they stop early and call it done, or they never
 stop. Both come from the same missing thing, a written finish line with states someone can point
-at. This skill interviews the owner until that exists, refuses it if it cannot be judged, and
-hands back three artifacts: the star, the generated run prompt, and the gate command that decides
+at. This skill interviews the owner until that exists, refuses the result if it cannot be judged,
+and hands back three artifacts: the star, the generated run prompt, and the gate that decides
 whether the work is actually finished.
 
-Everything runs offline. No dependencies, no API key, no model required. The optional judge is
-any command you supply yourself.
+The gate is deliberately two-layered. Machine-checkable parts run as plain shell commands. The
+part no script can decide - "the round-up arrived as a whole share", "a stranger completed
+checkout without writing to us" - goes to Jev, which answers with a probability and a calibrated
+confidence instead of prose, so the gate stays code and never reads a model's opinion of its own
+progress.
 
-Not an official Nous Research project.
+Everything else runs offline: pure Python, no dependencies, no key needed for the deterministic
+half. Jev is wired in as the default judge when a `TYPESAFE_API_KEY` is present, and the gate says
+plainly when it is not.
+
+Not an official Nous Research or TypeSafe project.
 
 ## Install
 
 ```bash
-hermes skills install https://raw.githubusercontent.com/poponline63/hermes-north-star/main/SKILL.md
+hermes skills install https://raw.githubusercontent.com/poponline63/hermes-jev-north-star/main/SKILL.md
 ```
 
 A SKILL.md URL is what Hermes installs from. `hermes skills inspect <same url>` previews it first.
@@ -25,18 +33,18 @@ That install copies the skill document, `references/`, and `templates/`; it does
 `scripts/`, so clone the repo once to have the tool on disk:
 
 ```bash
-git clone https://github.com/poponline63/hermes-north-star ~/hermes-north-star
-python3 ~/hermes-north-star/scripts/north_star.py --help
+git clone https://github.com/poponline63/hermes-jev-north-star ~/hermes-jev-north-star
+python3 ~/hermes-jev-north-star/scripts/north_star.py --help
 ```
 
 Then in a chat session:
 
 ```
-/hermes-north-star the public downloads page for my CLI tool is finished
+/hermes-jev-north-star the public downloads page for my CLI tool is finished
 ```
 
 Any agent that can run a shell command can use it without Hermes at all: the skill is one markdown
-file plus one stdlib Python script.
+file plus two stdlib Python scripts.
 
 ## Quick start
 
@@ -135,9 +143,12 @@ Order of business, cheapest first:
    output becomes the next step.
 2. **The evidence file** (`~/.hermes/north-star/state/<name>.md`). Empty, and the gate refuses to
    judge at all rather than guessing.
-3. **The judge**, if you pass one. Any command:
+3. **The judge.** Jev by default, or any command you prefer:
 
 ```bash
+python3 scripts/north_star.py gate downloads-page              # Jev when a key is configured
+python3 scripts/north_star.py gate downloads-page --judge jev  # insist on Jev
+python3 scripts/north_star.py gate downloads-page --no-judge   # deterministic only
 python3 scripts/north_star.py gate downloads-page --judge "python3 my_judge.py"
 ```
 
@@ -156,6 +167,44 @@ cannot reach its judge never passes silently.
 The judge runs through a shell, so quote paths that contain spaces. If it cannot be launched at
 all, the gate says so and returns not-met rather than passing.
 
+### Judged by Jev
+
+[Jev](https://typesafe.ai) (TypeSafe's System One) is a decision model: it does not write text, it
+answers typed questions with probabilities and a calibrated confidence. That is exactly the shape
+a gate needs, because the gate can then threshold a number instead of reading an argument.
+
+One call asks three things about the run's evidence:
+
+| question | primitive | what the gate does with it |
+|---|---|---|
+| is **every** requirement met? | `noul` | compared against the threshold (0.60 by default) |
+| how far along is this, on four levels? | `score` | the probability mass on the top level must clear 0.50 |
+| which requirement is furthest from being met? | `choice` | becomes the next step, with its own check line |
+
+The verdict is never a bare boolean:
+
+```bash
+$ python3 scripts/north_star.py gate rsapress --state "buy returned insufficient_funds, no order
+placed; 21 filled sells logged; cap fix committed locally but the VPS still runs the old exe"
+Goal not met: one reverse-split play runs end to end with no human step ...
+Judge: done 0.02 (needs 0.6), progress 1.05, confidence 0.96, jev-1.13.0, 921+176 tokens
+Weakest requirement: a play-driven buy fills in a funded account
+Done when: read the broker's own order state as filled and reconcile it against the account's position list
+```
+
+Confidence, model name and token usage are printed, so you can see how a verdict was reached and
+what it cost.
+
+What we measured before wiring it in as the default, on one real project:
+
+- It agreed with the obvious read every time: an unbuilt pipeline scored 0.02-0.15 done, and it
+  picked the genuinely blocked requirement as the weakest.
+- On an **empty** state it was worthless and self-contradictory (0.14 done beside "nothing material
+  looks met"), which is why the gate refuses an empty evidence file before any judge is asked.
+- Its numbers move between calls on the same state. Treat the threshold as a coarse signal and the
+  deterministic checks as the load-bearing part. Nothing here depends on Jev being right: a judge
+  that cannot answer never passes, and `--no-judge` gives you the same gate with no model at all.
+
 In Hermes, a failing gate short-circuits the loop's own judge, so the run continues on a concrete
 next step rather than on a model's opinion about its own progress:
 
@@ -168,7 +217,8 @@ next step rather than on a model's opinion about its own progress:
 ```
 SKILL.md                      the skill itself
 scripts/north_star.py         the CLI: set, check, prompt, evidence, gate
-scripts/smoke_test.py         every claim above, asserted
+scripts/jev_judge.py          the Jev judge: one System One call, three questions
+scripts/smoke_test.py         every claim above, asserted (77 checks, no key needed)
 templates/star.example.json   a star that passes, to start from
 references/star-format.md     field reference and the refusal rules
 ```

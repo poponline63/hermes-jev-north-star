@@ -11,6 +11,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -31,15 +33,61 @@ def check(label: str, condition: bool, detail: str = "") -> None:
         FAILURES.append(label)
 
 
+class _JevEndpoint(BaseHTTPRequestHandler):
+    """A stand-in for TypeSafe's System One: same request, same answer shape."""
+
+    done = 0.9
+    weakest = ""
+    fail = False
+
+    def do_POST(self):  # noqa: N802 - the name is the protocol
+        length = int(self.headers.get("Content-Length") or 0)
+        payload = json.loads(self.rfile.read(length) or b"{}")
+        questions = payload.get("questions") or {}
+        if self.fail:
+            self.send_response(500)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        answers = {}
+        if "done" in questions:
+            answers["done"] = {"type": "noul", "noul": self.done}
+        if "progress" in questions:
+            levels = questions["progress"].get("criteria") or []
+            top = len(levels) - 1
+            answers["progress"] = {
+                "type": "score", "score": self.done * top,
+                "legend": {str(i): lvl for i, lvl in enumerate(levels)},
+                "probabilities": {str(i): (1.0 if i == top else 0.0) for i in range(len(levels))},
+                "confidence": 0.8}
+        if "weakest" in questions and self.weakest:
+            answers["weakest"] = {"type": "choice", "choice": self.weakest,
+                                  "probabilities": {self.weakest: 0.7}, "confidence": 0.7}
+        body = json.dumps({"model": "jev-latest", "answers": answers,
+                           "usage": {"input_tokens": 41, "output_tokens": 9}}).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args):  # the test output stays readable
+        pass
+
+
 def judge_cmd(path: Path) -> str:
     """Quote both halves: the interpreter path can contain a space, and this runs through a
     shell (that is the tool's documented contract for --judge)."""
     return f'"{sys.executable}" "{path}"'
 
 
-def run(*args: str, stdin: str = "", home: Path, expect: int | None = None):
-    env = dict(os.environ, NORTH_STAR_HOME=str(home))
-    proc = subprocess.run([sys.executable, str(TOOL), *args], input=stdin, capture_output=True,
+def run(*args: str, stdin: str = "", home: Path, expect: int | None = None,
+        env_extra: dict | None = None, script: Path | None = None):
+    env = dict(os.environ, NORTH_STAR_HOME=str(home), HERMES_HOME=str(home))
+    env.pop("TYPESAFE_API_KEY", None)
+    env.update(env_extra or {})
+    proc = subprocess.run([sys.executable, str(script or TOOL), *args], input=stdin,
+                          capture_output=True,
                           text=True, encoding="utf-8", errors="replace", env=env, cwd=HERE.parent)
     out = (proc.stdout or "") + (proc.stderr or "")
     if expect is not None:
@@ -105,7 +153,8 @@ def main() -> int:
         code, out = run("gate", "demo", home=home, expect=1)
         check("the gate reports the goal is not met", "Goal not met" in out, out[:300])
         check("no judge means no ranking is claimed",
-              "No judge is configured" in out and "Start with:" in out, out[:400])
+              "no judge was used" in out and "Start with:" in out, out[:400])
+        check("with no key it says how to get a judge", "TYPESAFE_API_KEY" in out, out[:400])
         check("the next step carries the requirement's check",
               "Done when: run the install line" in out, out[:400])
 
@@ -156,6 +205,59 @@ def main() -> int:
             "--first", "print the current scheduler entry", home=home, expect=0)
         code, out = run("check", "cli", home=home, expect=0)
         check("a star built from flags is drivable", "drivable" in out, out[:200])
+
+        # 13. the Jev judge, against a stand-in for the System One endpoint ------------------
+        judge = TOOL.parent / "jev_judge.py"
+        check("the bundled Jev judge ships with the skill", judge.exists(), str(judge))
+
+        code, out = run("--available", home=home, expect=1, script=judge)
+        check("no key means the judge reports itself unavailable", "key: no" in out, out[:200])
+        check("no key means the gate stays deterministic",
+              "no judge was used" in run("gate", "demo", home=home, expect=1)[1])
+        code, out = run("--available", home=home, expect=0, script=judge,
+                        env_extra={"TYPESAFE_API_KEY": "test-key"})
+        check("with a key the judge reports itself available", "key: yes" in out, out[:200])
+
+        server = HTTPServer(("127.0.0.1", 0), _JevEndpoint)
+        port = server.server_address[1]
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        endpoint = {"TYPESAFE_API_KEY": "test-key",
+                    "TYPESAFE_BASE_URL": f"http://127.0.0.1:{port}/v1/systemone"}
+        try:
+            # not met, and the judge names the requirement it judges furthest away
+            _JevEndpoint.done = 0.05
+            _JevEndpoint.weakest = "the release page carries the same version the README names"
+            code, out = run("gate", "demo", home=home, expect=1, env_extra=endpoint)
+            check("a Jev 'not met' keeps the run going", "Goal not met" in out, out[:300])
+            check("Jev's weakest requirement is the one named",
+                  "the release page carries the same version" in out, out[:400])
+            check("the judge's numbers are shown, not hidden",
+                  "done 0.05" in out and "jev-latest" in out and "41+9 tokens" in out, out[:400])
+
+            # met: Jev answers that nothing is material, which is what a finished goal gets
+            _JevEndpoint.done = 0.93
+            _JevEndpoint.weakest = ""
+            code, out = run("gate", "demo", home=home, expect=0, env_extra=endpoint)
+            check("a Jev 'met' ends the run", out.startswith("DONE"), out[:200])
+            check("the done line carries the judge's reasoning", "done 0.93" in out, out[:200])
+
+            # the endpoint breaks: never pass
+            _JevEndpoint.fail = True
+            code, out = run("gate", "demo", home=home, expect=1, env_extra=endpoint)
+            check("an endpoint that errors never passes", "could not reach its judge" in out,
+                  out[:300])
+            _JevEndpoint.fail = False
+        finally:
+            server.shutdown()
+            server.server_close()
+
+        # an explicitly requested judge that cannot answer must not fall back to "fine"
+        code, out = run("gate", "demo", "--judge", "jev", home=home, expect=1)
+        check("--judge jev with no key fails closed", "could not reach its judge" in out, out[:300])
+
+        code, out = run("gate", "demo", "--no-judge", home=home, expect=1)
+        check("--no-judge says plainly that nothing ranked the work",
+              "No judge is configured" in out, out[:300])
     finally:
         shutil.rmtree(home, ignore_errors=True)
 
