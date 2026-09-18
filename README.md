@@ -220,8 +220,10 @@ next step rather than on a model's opinion about its own progress:
 
 ```
 SKILL.md                      the skill itself
-docs/hero.svg                 the banner above, drawn as SVG (no binary blobs)
+docs/hero.svg                 the banner above, drawn as SVG
 docs/gate.svg                 the gate diagram
+docs/social-preview.svg       the source for the link-preview card
+docs/social-preview.png       that card exported at 1280x640 (the only binary here)
 scripts/north_star.py         the CLI: set, check, prompt, evidence, gate
 scripts/jev_judge.py          the Jev judge: one System One call, three questions
 scripts/smoke_test.py         every claim above, asserted (77 checks, no key needed)

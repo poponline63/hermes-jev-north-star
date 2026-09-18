@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640" role="img" aria-label="hermes-jev-north-star. A star becomes a prompt, the run leaves evidence, and a gate of checks plus a Jev judge decides. Exit 0 means met, exit 1 names the weakest requirement.">
+  <title>hermes-jev-north-star</title>
+  <desc>Social preview card, sized for thumbnail legibility: few words, large type, the pipeline and the two exit codes.</desc>
+  <style>
+    .bg { fill: #0d1117; }
+    .band { fill: #111826; }
+    .title { font: 700 66px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .sub { font: 400 30px -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif; fill: #8b949e; }
+    .lbl { font: 600 30px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .cap { font: 400 22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #8b949e; }
+    .exit { font: 600 30px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .exittxt { font: 400 26px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #c9d1d9; }
+    .box { fill: #161b22; stroke: #30363d; stroke-width: 3; }
+    .flow { stroke: #30363d; stroke-width: 3; fill: none; }
+    .flowhi { stroke: #d29922; stroke-width: 3; fill: none; }
+    .amber { fill: #d29922; }
+    .green { fill: #3fb950; }
+    .blue { fill: #58a6ff; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1280" height="640"/>
+  <rect class="band" x="0" y="0" width="1280" height="210"/>
+
+  <!-- the fixed point the run is aimed at -->
+  <g transform="translate(1148,104)">
+    <circle r="44" class="flow"/>
+    <circle r="28" fill="#0d1117" stroke="#58a6ff" stroke-width="3"/>
+    <path d="M0,-19 L5.5,-5.5 L19,0 L5.5,5.5 L0,19 L-5.5,5.5 L-19,0 L-5.5,-5.5 Z" class="blue"/>
+  </g>
+
+  <text class="title" x="80" y="112">hermes-jev-north-star</text>
+  <text class="sub" x="80" y="164">write the finish line down, then let it judge the run</text>
+
+  <!-- pipeline: five stages, two of them inside the gate -->
+  <g transform="translate(80,258)">
+    <rect class="box" x="0" y="0" width="176" height="104" rx="14"/>
+    <text class="lbl" x="26" y="50">star</text>
+    <text class="cap" x="26" y="82">validated</text>
+
+    <path class="flow" d="M176,52 L214,52"/>
+    <path class="flow" d="M204,42 L214,52 L204,62"/>
+
+    <rect class="box" x="220" y="0" width="188" height="104" rx="14"/>
+    <text class="lbl" x="246" y="50">prompt</text>
+    <text class="cap" x="246" y="82">from the star</text>
+
+    <path class="flow" d="M408,52 L446,52"/>
+    <path class="flow" d="M436,42 L446,52 L436,62"/>
+
+    <rect class="box" x="452" y="0" width="176" height="104" rx="14"/>
+    <text class="lbl" x="478" y="50">run</text>
+    <text class="cap" x="478" y="82">the work</text>
+
+    <path class="flow" d="M628,52 L666,52"/>
+    <path class="flow" d="M656,42 L666,52 L656,62"/>
+
+    <rect class="box" x="672" y="0" width="196" height="104" rx="14"/>
+    <text class="lbl" x="698" y="50">evidence</text>
+    <text class="cap" x="698" y="82">appended</text>
+
+    <path class="flowhi" d="M868,52 L906,52"/>
+    <path class="flowhi" d="M896,42 L906,52 L896,62"/>
+
+    <rect x="912" y="-20" width="288" height="144" rx="16" fill="#161b22" stroke="#d29922" stroke-width="3"/>
+    <text class="amber" x="938" y="14" style="font: 600 22px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">gate</text>
+    <rect x="936" y="28" width="240" height="40" rx="10" fill="#0d1117" stroke="#30363d" stroke-width="3"/>
+    <text class="lbl" x="958" y="58" style="font-size:24px;">checks</text>
+    <rect x="936" y="76" width="240" height="40" rx="10" fill="#0d1117" stroke="#30363d" stroke-width="3"/>
+    <text class="lbl" x="958" y="106" style="font-size:24px;">judge</text>
+  </g>
+
+  <!-- what the exit codes mean, in the same words the tool prints -->
+  <g transform="translate(80,472)">
+    <text class="exit green" x="0" y="0">exit 0</text>
+    <text class="exittxt" x="140" y="0">every requirement is met</text>
+    <text class="exit amber" x="0" y="52">exit 1</text>
+    <text class="exittxt" x="140" y="52">keep going, and stdout names the weakest requirement</text>
+  </g>
+
+  <text class="cap" x="80" y="586">no evidence, no verdict   ·   a judge that cannot answer never passes</text>
+</svg>
