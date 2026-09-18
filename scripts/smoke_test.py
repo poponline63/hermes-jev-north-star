@@ -89,6 +89,10 @@ def main() -> int:
               "run the install line from the README in a fresh container" in out)
         check("prompt json shape", json.loads(run("prompt", "demo", "--json", home=home)[1])
               .get("name") == "demo")
+        # the run that receives this prompt is in another working directory, so every command
+        # printed has to resolve from anywhere, not just from the repo root.
+        check("prompt names the tool by an absolute path",
+              TOOL.resolve().as_posix() in out, out[:300])
 
         # 5. the gate refuses to judge nothing
         code, out = run("gate", "demo", home=home, expect=1)

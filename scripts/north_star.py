@@ -40,10 +40,19 @@ MOOD_WORDS = ("polished", "seamless", "robust", "world-class", "production-ready
 # Verbs that usually mean the check is observable. Used only to nudge, never to block.
 OBSERVABLE_HINTS = ("run ", "open ", "read ", "compare", "check", "test", "print", "log",
                     "curl", "grep", "diff", "look at", "measure", "count", "purchase", "sign",
-                    "upload", "download", "select", "query", "poll")
+                    "upload", "download", "select", "query", "poll", "confirm", "inspect",
+                    "paste", "note the", "list the")
 
 GAP = ("(fill this in: repo + branch + remote, host + access + ports, where credentials live "
        "and the rule about them, invariants you have corrected before)")
+
+# The prompt is pasted into a run whose working directory is not this one, so every command it
+# prints has to resolve anyway. Forward slashes keep it usable from cmd, bash and POSIX shells.
+TOOL = Path(__file__).resolve()
+
+
+def tool_cmd(*args: str) -> str:
+    return "python3 " + " ".join([f'"{TOOL.as_posix()}"', *args])
 
 
 # ── storage ───────────────────────────────────────────────────────────────
@@ -193,8 +202,8 @@ def build_prompt(name: str, star: Dict[str, Any]) -> str:
     truth = [str(t).strip() for t in (star.get("ground_truth") or []) if str(t).strip()]
     lines += [f"- {t}" for t in truth] or [f"- {GAP}"]
     lines += [f"- The finish line is the north star '{name}' "
-              f"(re-read it with: python3 scripts/north_star.py show {name}). Ground truth in "
-              "this prompt outranks anything the run later infers."]
+              f"(re-read it with: {tool_cmd('show', name)}). Ground truth in this prompt "
+              "outranks anything the run later infers."]
 
     lines += ["", "WHAT MUST BE TRUE, AND HOW EACH ONE IS SEEN"]
     for index, req in enumerate(star.get("requirements") or [], start=1):
@@ -212,11 +221,11 @@ def build_prompt(name: str, star: Dict[str, Any]) -> str:
     lines += ["", "CHECK BEFORE SAYING DONE",
               f"- Keep this run's evidence in {state_path(name)}: append one short line per real "
               "result, with the command and what it actually printed "
-              f"(python3 scripts/north_star.py evidence {name} --add \"...\"). That file is what "
-              "the gate reads, and an empty file means there is nothing to judge.",
-              f"- Run `python3 scripts/north_star.py gate {name}`. Exit 0 means every "
-              "requirement above is met. Anything else names the weakest requirement and the "
-              "next step. Keep going until it exits 0 or the stop rule fires.",
+              f"({tool_cmd('evidence', name, '--add', chr(34) + '...' + chr(34))}). That file is "
+              "what the gate reads, and an empty file means there is nothing to judge.",
+              f"- Run `{tool_cmd('gate', name)}`. Exit 0 means every requirement above is met. "
+              "Anything else names the weakest requirement and the next step. Keep going until "
+              "it exits 0 or the stop rule fires.",
               "- Re-read this prompt before believing a finding that feels convenient."]
 
     lines += ["", "NEVER CLAIM WITHOUT PROOF",
@@ -334,7 +343,7 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
         text = ("Nothing to judge: no state was passed and the run's evidence file is empty:\n"
                 f"  {path}\n"
                 "Append what changed to that file (or pass --state / --state-file), then run "
-                f"the gate again:\n  python3 scripts/north_star.py gate {name}")
+                f"the gate again:\n  {tool_cmd('gate', name)}")
         return {"ok": True, "exit_code": 1, "gate": "state", "verdict": "continue",
                 "text": text, "next_prompt": text}
 
