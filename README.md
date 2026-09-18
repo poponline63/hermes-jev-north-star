@@ -20,8 +20,14 @@ Not an official Nous Research project.
 hermes skills install https://raw.githubusercontent.com/poponline63/hermes-north-star/main/SKILL.md
 ```
 
-(That form is the one Hermes installs from: a direct SKILL.md URL, which brings the skill and the
-support files it names. `hermes skills inspect <same url>` previews it first.)
+A SKILL.md URL is what Hermes installs from. `hermes skills inspect <same url>` previews it first.
+That install copies the skill document, `references/`, and `templates/`; it does not copy
+`scripts/`, so clone the repo once to have the tool on disk:
+
+```bash
+git clone https://github.com/poponline63/hermes-north-star ~/hermes-north-star
+python3 ~/hermes-north-star/scripts/north_star.py --help
+```
 
 Then in a chat session:
 
@@ -29,13 +35,8 @@ Then in a chat session:
 /hermes-north-star the public downloads page for my CLI tool is finished
 ```
 
-Any agent that can run a shell command can use it without Hermes: the skill is a markdown file
-plus one stdlib Python script.
-
-```bash
-git clone https://github.com/poponline63/hermes-north-star
-python3 hermes-north-star/scripts/north_star.py --help
-```
+Any agent that can run a shell command can use it without Hermes at all: the skill is one markdown
+file plus one stdlib Python script.
 
 ## Quick start
 

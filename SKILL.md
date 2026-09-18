@@ -29,28 +29,35 @@ A star is not a theme. "Make it polished" cannot be judged, so the loop that rea
 a next action and the gate can never honestly say done. The whole job here is to turn an
 intention into states someone can point at.
 
-## Files
+## Getting the tool
 
-This skill ships with support files, installed alongside it:
+`north_star.py` runs every command below, and it has to exist on disk.
 
-- [scripts/north_star.py](scripts/north_star.py) - the tool. Every command below runs this.
-- `scripts/smoke_test.py` - its own tests, and the assertions behind this document.
-- `templates/star.example.json` - a star that passes, to start from.
-- `references/star-format.md` - the field reference and every refusal rule.
+- **From a clone:** run `python3 scripts/north_star.py ...` at the repo root.
+- **From an installed skill:** the hub copies this document, `references/`, and `templates/` when
+  you install from a SKILL.md URL, and it does not copy `scripts/`. Clone the repo once so the
+  tool is there:
+
+```bash
+git clone https://github.com/poponline63/hermes-north-star ~/hermes-north-star
+python3 ~/hermes-north-star/scripts/north_star.py --help
+```
+
+Everywhere below, `<tool>` means whichever path is real for your install. The tests are
+`scripts/smoke_test.py`, the starting template is `templates/star.example.json`, and the field
+reference is `references/star-format.md`.
 
 ## Commands
 
-`<skill>` is the directory holding this file (commonly `~/.hermes/skills/hermes-north-star`).
-
 ```bash
-python3 <skill>/scripts/north_star.py set <name> --from-json <file|->   # validated; exits 2 and lists the problems
-python3 <skill>/scripts/north_star.py check <name>                      # re-check a saved star
-python3 <skill>/scripts/north_star.py check --all                       # re-check all of them
-python3 <skill>/scripts/north_star.py list | show <name>
-python3 <skill>/scripts/north_star.py prompt <name>                     # the paste-ready run prompt
-python3 <skill>/scripts/north_star.py evidence <name> --add "one line"  # what the run learned
-python3 <skill>/scripts/north_star.py gate <name>                       # exit 0 = met, 1 = keep going
-python3 <skill>/scripts/north_star.py rm <name>
+python3 <tool> set <name> --from-json <file|->   # validated; exits 2 and lists the problems
+python3 <tool> check <name>                      # re-check a saved star
+python3 <tool> check --all                       # re-check all of them
+python3 <tool> list | show <name>
+python3 <tool> prompt <name>                     # the paste-ready run prompt
+python3 <tool> evidence <name> --add "one line"  # what the run learned
+python3 <tool> gate <name>                       # exit 0 = met, 1 = keep going
+python3 <tool> rm <name>
 ```
 
 No dependencies, no network, no model required. `--home` (or `$NORTH_STAR_HOME`) decides where
@@ -150,7 +157,7 @@ In Hermes, the core goal loop runs a gate as a static shell command with no stdi
 the evidence lives in a file the running turn keeps updating:
 
 ```
-/goal gate add python3 <skill>/scripts/north_star.py gate <name>
+/goal gate add python3 <tool> gate <name>
 ```
 
 ## Pitfalls
