@@ -105,6 +105,16 @@ def build_questions(requirements: List[str]) -> Dict[str, Any]:
         questions["weakest"] = {"type": "choice",
                                 "instructions": "Which requirement is furthest from being met?",
                                 "criteria": options}
+        # Per-requirement verdicts, so a run can see what is already proven instead of guessing
+        # which parts are done. One yes/no per requirement, in the same call.
+        for index, req in enumerate(requirements, start=1):
+            questions[f"met_{index}"] = {
+                "type": "noul",
+                "instructions": (f"Based only on the evidence, is this requirement met and shown "
+                                 f"to be met? Requirement: {req}"),
+                "criteria": {"true": "The evidence shows this requirement is met.",
+                             "false": "This requirement is unmet, unproven, or unverified."},
+            }
     return questions
 
 
@@ -204,6 +214,19 @@ def judge(payload: Dict[str, Any]) -> Dict[str, Any]:
     top_index = str(len(levels) - 1) if levels else ""
     top_probability = float(probabilities.get(top_index) or 0.0) if top_index else 0.0
 
+    # Read the per-requirement answers back, keeping the order the star states them in.
+    per_requirement: List[Dict[str, Any]] = []
+    for index, req in enumerate(requirements, start=1):
+        answer = answers.get(f"met_{index}")
+        if not isinstance(answer, dict):
+            continue
+        value, confidence = read_noul(answer)
+        per_requirement.append({"requirement": req, "met": value >= 0.5,
+                                "probability": round(value, 4),
+                                "confidence": round(confidence, 4)})
+    proven = [r["requirement"] for r in per_requirement if r["met"]]
+    unproven = [r["requirement"] for r in per_requirement if not r["met"]]
+
     blockers: List[str] = []
     if done < threshold:
         blockers.append(f"done probability {done:.2f} < {threshold:.2f}")
@@ -218,6 +241,9 @@ def judge(payload: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "met": met,
         "weakest": "" if weakest == NOTHING_MATERIAL else weakest,
+        "proven": proven,
+        "unproven": unproven,
+        "per_requirement": per_requirement,
         "done": round(done, 4),
         "done_needs": threshold,
         "progress": progress,

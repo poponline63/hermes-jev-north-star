@@ -185,16 +185,28 @@ One call asks three things about the run's evidence:
 | how far along is this, on four levels? | `score` | the probability mass on the top level must clear 0.50 |
 | which requirement is furthest from being met? | `choice` | becomes the next step, with its own check line |
 
-The verdict is never a bare boolean:
+The verdict is never a bare boolean, and it always separates what is already proven from what is
+not:
 
 ```bash
-$ python3 scripts/north_star.py gate rsapress --state "buy returned insufficient_funds, no order
-placed; 21 filled sells logged; cap fix committed locally but the VPS still runs the old exe"
-Goal not met: one reverse-split play runs end to end with no human step ...
-Judge: done 0.02 (needs 0.6), progress 1.05, confidence 0.96, jev-1.13.0, 921+176 tokens
-Weakest requirement: a play-driven buy fills in a funded account
-Done when: read the broker's own order state as filled and reconcile it against the account's position list
+$ python3 scripts/north_star.py gate usclock
+Goal not met: a real shop owner opens his own trade page and sends the order request it builds
+Judge: done 0.03 (needs 0.6), progress 1.25, confidence 0.94, jev-1.13.0, 1289+281 tokens
+Already shown to hold (1 of 5):
+  - the live site serves every catalog page it claims to serve
+Still unproven (4 of 5):
+  - each shop's trade page builds a complete order request with that shop's own details
+  - the request that arrives names the shop, its 12 picks with SKUs, and the source page
+  - a shop owner can reach the site from a search or a direct link without a password
+  - the apply form delivers an application to the inbox it names
+Weakest requirement: the request that arrives names the shop, its 12 picks with SKUs, and the source page
+Done when: send one test request to a mailbox I control and read what actually arrives
 ```
+
+That split is the point for a long run. A run that cannot tell which requirements are already
+proven re-does finished work or, worse, assumes the whole thing is nearly done because the summary
+sounds confident. If the judge names a weakest requirement it also marked as proven, the gate says
+so out loud rather than printing a contradiction as a verdict.
 
 Confidence, model name and token usage are printed, so you can see how a verdict was reached and
 what it cost.

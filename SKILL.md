@@ -166,14 +166,23 @@ python3 <tool> gate <name> --judge jev  # insist on Jev, fail closed if it canno
 python3 <tool> gate <name> --no-judge   # no model at all, and it says so
 ```
 
-One Jev call (`scripts/jev_judge.py`) asks three typed questions about the run's evidence: is every
-requirement met (`noul`), how far along is this on four levels (`score`), and which requirement is
-furthest from being met (`choice`). The gate prints what it got back, never just a boolean:
+One Jev call (`scripts/jev_judge.py`) asks typed questions about the run's evidence in a single
+request: is every requirement met (`noul`), how far along is this on four levels (`score`), which
+requirement is furthest from being met (`choice`), and one yes/no per requirement so the run can
+see what is already proven. The gate prints what it got back, never just a boolean:
 
 ```
-Judge: done 0.02 (needs 0.6), progress 1.05, confidence 0.96, jev-1.13.0, 921+176 tokens
-Weakest requirement: a play-driven buy fills in a funded account
+Judge: done 0.03 (needs 0.6), progress 1.25, confidence 0.94, jev-1.13.0, 1289+281 tokens
+Already shown to hold (1 of 5):
+  - the live site serves every catalog page it claims to serve
+Still unproven (4 of 5):
+  - each shop's trade page builds a complete order request with that shop's own details
+Weakest requirement: the request that arrives names the shop, its 12 picks with SKUs, and the source page
 ```
+
+The per-requirement verdicts are what stop a long run from re-doing finished work or assuming a
+confident summary means near-completion. If the judge names a weakest requirement it also marked
+proven, the gate says its answers disagree instead of printing both as fact.
 
 Two honest limits, both learned by measuring it on a real project:
 

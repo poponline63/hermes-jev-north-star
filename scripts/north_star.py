@@ -459,10 +459,22 @@ def run_gate(name: str, state_text: str, *, judge: Optional[str] = None,
                      "Take the first one that is not proven yet.")
     elif extra:
         lines.append(judge_line(extra).strip())
+    proven = [str(p) for p in (extra.get("proven") or [])]
+    unproven = [str(p) for p in (extra.get("unproven") or [])]
+    if proven:
+        lines.append(f"Already shown to hold ({len(proven)} of {len(requirements)}):")
+        lines += [f"  - {p}" for p in proven]
+    if unproven:
+        lines.append(f"Still unproven ({len(unproven)} of {len(requirements)}):")
+        lines += [f"  - {p}" for p in unproven]
+
     if weakest:
         label = "Weakest requirement" if judge else "Start with"
         lines.append(f"{label}: {weakest}")
         lines.append(f"Done when: {check}")
+    if weakest and proven and weakest in proven:
+        lines.append("Note: the judge also marked that requirement as met, so its answers "
+                     "disagree. Weigh the evidence yourself before trusting either one.")
     lines.append("Do not restate the goal. Do the smallest next step that moves the weakest "
                  "requirement, then run the gate again.")
     lines.append(f"Evidence so far ({state_path(name)}): "

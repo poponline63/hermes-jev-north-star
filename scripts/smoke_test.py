@@ -39,6 +39,7 @@ class _JevEndpoint(BaseHTTPRequestHandler):
     done = 0.9
     weakest = ""
     fail = False
+    proven: list = []          # requirement texts the stand-in marks as met
 
     def do_POST(self):  # noqa: N802 - the name is the protocol
         length = int(self.headers.get("Content-Length") or 0)
@@ -63,6 +64,12 @@ class _JevEndpoint(BaseHTTPRequestHandler):
         if "weakest" in questions and self.weakest:
             answers["weakest"] = {"type": "choice", "choice": self.weakest,
                                   "probabilities": {self.weakest: 0.7}, "confidence": 0.7}
+        for key, question in questions.items():
+            if key.startswith("met_") and question.get("type") == "noul":
+                text = str(question.get("instructions") or "")
+                hit = any(p and p in text for p in self.proven)
+                answers[key] = {"type": "noul", "noul": 0.9 if hit else 0.1,
+                                "confidence": 0.85}
         body = json.dumps({"model": "jev-latest", "answers": answers,
                            "usage": {"input_tokens": 41, "output_tokens": 9}}).encode()
         self.send_response(200)
@@ -227,12 +234,26 @@ def main() -> int:
             # not met, and the judge names the requirement it judges furthest away
             _JevEndpoint.done = 0.05
             _JevEndpoint.weakest = "the release page carries the same version the README names"
+            _JevEndpoint.proven = ["the documented install command works on a clean machine",
+                                   "a wrong input produces a clear error instead of a traceback"]
             code, out = run("gate", "demo", home=home, expect=1, env_extra=endpoint)
             check("a Jev 'not met' keeps the run going", "Goal not met" in out, out[:300])
             check("Jev's weakest requirement is the one named",
                   "the release page carries the same version" in out, out[:400])
             check("the judge's numbers are shown, not hidden",
                   "done 0.05" in out and "jev-latest" in out and "41+9 tokens" in out, out[:400])
+            # the gap this run exposed: a run must be able to see what is ALREADY proven
+            check("what is proven is listed", "Already shown to hold (2 of 4)" in out, out[:500])
+            check("the proven requirement text is printed",
+                  "the documented install command works on a clean machine" in out, out[:500])
+            check("what is still unproven is listed", "Still unproven (2 of 4)" in out, out[:500])
+
+            # the judge naming a weakest it also marked proven is a contradiction, not a verdict
+            _JevEndpoint.weakest = "the documented install command works on a clean machine"
+            code, out = run("gate", "demo", home=home, expect=1, env_extra=endpoint)
+            check("a judge that contradicts itself says so",
+                  "its answers disagree" in out, out[:500])
+            _JevEndpoint.weakest = "the release page carries the same version the README names"
 
             # met: Jev answers that nothing is material, which is what a finished goal gets
             _JevEndpoint.done = 0.93
