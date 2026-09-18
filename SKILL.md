@@ -191,6 +191,26 @@ the evidence lives in a file the running turn keeps updating:
 /goal gate add python3 <tool> gate <name>
 ```
 
+## Related
+
+- **grill-me** (`/grill-me`) attacks a plan you already have: it walks the design tree and hands
+  back the decisions. This is the same interview aimed at one thing instead of everything, and it
+  leaves behind a file: the states a run is judged against, plus the prompt that starts it.
+  Grilling first and writing the star second works well.
+
+## Credit
+
+The interview mechanic here is adapted from [grill-me](https://github.com/RobMitt/grill-me-skill)
+by RobMitt (614 stars, no license file), which mapped Claude Code's `AskUserQuestion` onto whatever
+multiple-choice prompt the host provides. What is borrowed is the asking style: one question at a
+time, two to four concrete options, look it up instead of asking, never a wall of questions in
+prose.
+
+Everything else is separate work and is not derived from it: the star format and its refusal rules,
+the generated run prompt, the evidence file, the three-layer gate, the Jev judge, and all of the
+code. grill-me resolves a design tree and stops. This writes a finish line a run can be judged
+against, and the judging is the point.
+
 ## Pitfalls
 
 - **Trusting the judge with the parts a script can check.** Deterministic `gates` run first for a

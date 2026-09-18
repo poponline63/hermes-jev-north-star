@@ -248,6 +248,17 @@ state/<name>.md       the evidence each run leaves behind
 
 Plain files. Readable, diffable, and yours. No database, nothing to migrate.
 
+## Credit
+
+The interview mechanic (one question at a time, two to four concrete options, look it up instead of
+asking) is adapted from [grill-me](https://github.com/RobMitt/grill-me-skill) by RobMitt, which
+mapped Claude Code's `AskUserQuestion` onto whatever multiple-choice prompt the host provides.
+That skill interviews a plan and hands back the decisions. This one aims the same interview at a
+single finish line and leaves behind something a run can be judged against.
+
+Everything else is separate work: the star format and its refusal rules, the generated run prompt,
+the evidence file, the three-layer gate, the Jev judge, and all of the code.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
