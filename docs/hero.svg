@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" width="1200" height="320" role="img" aria-label="hermes-jev-north-star: star, prompt, run, evidence, then a gate made of deterministic checks and a Jev judge.">
+  <title>hermes-jev-north-star</title>
+  <desc>A run moves left to right: a saved star becomes a generated prompt, the run produces evidence, and a gate decides. The gate runs deterministic shell checks first, then reads the evidence file, then asks Jev. It exits 0 only when every requirement is met.</desc>
+  <style>
+    .bg { fill: #0d1117; }
+    .edge { fill: none; stroke: #30363d; stroke-width: 2; }
+    .title { font: 700 34px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .sub { font: 400 17px -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif; fill: #8b949e; }
+    .lbl { font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .small { font: 400 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #8b949e; }
+    .tiny { font: 400 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #6e7681; }
+    .box { fill: #161b22; stroke: #30363d; stroke-width: 2; }
+    .star { stroke: #58a6ff; stroke-width: 2; fill: none; }
+    .flow { stroke: #30363d; stroke-width: 2; fill: none; }
+    .flowhi { stroke: #d29922; stroke-width: 2; fill: none; }
+    .jd { fill: #8b949e; }
+    .accent { fill: #d29922; }
+    .blue { fill: #58a6ff; }
+    .green { fill: #3fb950; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="320" rx="14"/>
+  <rect x="1" y="1" width="1198" height="318" rx="13" class="edge"/>
+
+  <!-- title block -->
+  <text class="title" x="40" y="66">hermes-jev-north-star</text>
+  <text class="sub" x="40" y="96">turn an intention into a finish line an agent can be judged against</text>
+
+  <!-- north star mark: the fixed point the whole run is aimed at -->
+  <g transform="translate(1130,58)">
+    <circle r="17" class="star"/>
+    <path d="M0,-11 L3.2,-3.2 L11,0 L3.2,3.2 L0,11 L-3.2,3.2 L-11,0 L-3.2,-3.2 Z" class="blue"/>
+  </g>
+
+  <!-- pipeline -->
+  <g transform="translate(40,150)">
+    <!-- star -->
+    <rect class="box" x="0" y="0" width="150" height="66" rx="10"/>
+    <text class="lbl" x="18" y="30">star</text>
+    <text class="small" x="18" y="50">saved + validated</text>
+
+    <path class="flow" d="M150,33 L186,33"/>
+    <path class="flow" d="M178,27 L186,33 L178,39"/>
+
+    <!-- prompt -->
+    <rect class="box" x="190" y="0" width="160" height="66" rx="10"/>
+    <text class="lbl" x="208" y="30">prompt</text>
+    <text class="small" x="208" y="50">generated from it</text>
+
+    <path class="flow" d="M350,33 L386,33"/>
+    <path class="flow" d="M378,27 L386,33 L378,39"/>
+
+    <!-- run -->
+    <rect class="box" x="390" y="0" width="150" height="66" rx="10"/>
+    <text class="lbl" x="408" y="30">run</text>
+    <text class="small" x="408" y="50">does the work</text>
+
+    <path class="flow" d="M540,33 L576,33"/>
+    <path class="flow" d="M568,27 L576,33 L568,39"/>
+
+    <!-- evidence -->
+    <rect class="box" x="580" y="0" width="180" height="66" rx="10"/>
+    <text class="lbl" x="598" y="30">evidence file</text>
+    <text class="small" x="598" y="50">one line per result</text>
+
+    <path class="flowhi" d="M760,33 L800,33"/>
+    <path class="flowhi" d="M792,27 L800,33 L792,39"/>
+
+    <!-- the gate -->
+    <rect x="804" y="-16" width="356" height="98" rx="12" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+    <text class="accent" x="824" y="10" style="font: 600 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;">gate</text>
+
+    <rect x="824" y="20" width="150" height="46" rx="8" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+    <text class="lbl" x="838" y="40">checks</text>
+    <text class="tiny" x="838" y="56">shell, exits 0</text>
+
+    <rect x="988" y="20" width="152" height="46" rx="8" fill="#0d1117" stroke="#30363d" stroke-width="2"/>
+    <text class="lbl" x="1002" y="40">judge</text>
+    <text class="tiny" x="1002" y="56">jev, typed answers</text>
+
+    <path class="flowhi" d="M1160,33 L1196,33"/>
+    <path class="flowhi" d="M1188,27 L1196,33 L1188,39"/>
+  </g>
+
+  <!-- verdict strip -->
+  <g transform="translate(40,258)">
+    <text class="small" x="0" y="0"><tspan class="green">exit 0</tspan><tspan class="jd"> = every requirement is met</tspan></text>
+    <text class="small" x="0" y="20"><tspan class="accent">exit 1</tspan><tspan class="jd"> = keep going, and stdout names the weakest requirement</tspan></text>
+    <text class="tiny" x="0" y="46">no evidence, no verdict  ·  a judge that cannot answer never passes  ·  77 checks, no key and no network needed</text>
+  </g>
+</svg>

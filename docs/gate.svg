@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 420" width="1200" height="420" role="img" aria-label="The gate in detail: deterministic checks, then the evidence file, then Jev, and what the verdict looks like.">
+  <title>How the gate decides</title>
+  <desc>Layers run cheapest first. Shell checks and the evidence file are deterministic. Jev answers typed questions with probabilities, and the gate prints the numbers behind its verdict.</desc>
+  <style>
+    .bg { fill: #0d1117; }
+    .edge { fill: none; stroke: #30363d; stroke-width: 2; }
+    .h { font: 700 20px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .lbl { font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #f0f6fc; }
+    .small { font: 400 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #8b949e; }
+    .tiny { font: 400 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #6e7681; }
+    .mono { font: 400 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: #c9d1d9; }
+    .box { fill: #161b22; stroke: #30363d; stroke-width: 2; }
+    .flow { stroke: #30363d; stroke-width: 2; fill: none; }
+    .dash { stroke: #30363d; stroke-width: 2; fill: none; stroke-dasharray: 6 6; }
+    .amber { fill: #d29922; }
+    .green { fill: #3fb950; }
+    .blue { fill: #58a6ff; }
+    .red { fill: #f85149; }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="420" rx="14"/>
+  <rect x="1" y="1" width="1198" height="418" rx="13" class="edge"/>
+
+  <text class="h" x="40" y="54">how the gate decides</text>
+  <text class="small" x="40" y="80">cheapest first, and nothing fuzzy until the deterministic layers are done</text>
+
+  <!-- layer 1 -->
+  <g transform="translate(40,110)">
+    <rect class="box" x="0" y="0" width="340" height="120" rx="10"/>
+    <circle cx="26" cy="26" r="11" fill="#0d1117" stroke="#3fb950" stroke-width="2"/>
+    <text class="green" x="22" y="31" style="font: 700 12px ui-monospace, monospace;">1</text>
+    <text class="lbl" x="48" y="31">deterministic checks</text>
+    <text class="small" x="20" y="58">shell commands from the star's gates</text>
+    <text class="tiny" x="20" y="80">a failure short-circuits everything else</text>
+    <text class="tiny" x="20" y="98">its own output becomes the next step</text>
+  </g>
+
+  <path class="flow" d="M380,170 L424,170"/>
+  <path class="flow" d="M416,164 L424,170 L416,176"/>
+
+  <!-- layer 2 -->
+  <g transform="translate(430,110)">
+    <rect class="box" x="0" y="0" width="340" height="120" rx="10"/>
+    <circle cx="26" cy="26" r="11" fill="#0d1117" stroke="#3fb950" stroke-width="2"/>
+    <text class="green" x="22" y="31" style="font: 700 12px ui-monospace, monospace;">2</text>
+    <text class="lbl" x="48" y="31">the evidence file</text>
+    <text class="small" x="20" y="58">what the run appended as it worked</text>
+    <text class="tiny" x="20" y="80">empty means the gate refuses to judge</text>
+    <text class="tiny" x="20" y="98">a verdict on nothing is noise</text>
+  </g>
+
+  <path class="flow" d="M770,170 L814,170"/>
+  <path class="flow" d="M806,164 L814,170 L806,176"/>
+
+  <!-- layer 3 -->
+  <g transform="translate(820,110)">
+    <rect x="0" y="0" width="340" height="120" rx="10" fill="#161b22" stroke="#d29922" stroke-width="2"/>
+    <circle cx="26" cy="26" r="11" fill="#0d1117" stroke="#d29922" stroke-width="2"/>
+    <text class="amber" x="22" y="31" style="font: 700 12px ui-monospace, monospace;">3</text>
+    <text class="lbl" x="48" y="31">Jev, one call</text>
+    <text class="small" x="20" y="58">noul · is every requirement met</text>
+    <text class="tiny" x="20" y="78">score · how far along, four levels</text>
+    <text class="tiny" x="20" y="98">choice · which requirement is furthest</text>
+  </g>
+
+  <!-- what comes back -->
+  <g transform="translate(40,262)">
+    <rect class="box" x="0" y="0" width="1120" height="122" rx="10"/>
+    <text class="lbl" x="20" y="30">what comes back is never just a boolean</text>
+    <text class="mono" x="20" y="60">$ python3 scripts/north_star.py gate rsapress</text>
+    <text class="mono" x="20" y="80">Goal not met: one reverse-split play runs end to end with no human step</text>
+    <text class="mono" x="20" y="100" style="fill:#d29922;">Judge: done 0.02 (needs 0.6), progress 1.05, confidence 0.96, jev-1.13.0, 921+176 tokens</text>
+    <text class="mono" x="20" y="118" style="fill:#c9d1d9;">Weakest requirement: a play-driven buy fills in a funded account</text>
+  </g>
+
+  <text class="tiny" x="40" y="408">a judge that cannot answer counts as unreachable, never as agreement  ·  --no-judge runs the same gate with no model at all</text>
+</svg>

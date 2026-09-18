@@ -1,5 +1,7 @@
 # hermes-jev-north-star
 
+<img src="docs/hero.svg" alt="A run moves from a saved star to a generated prompt, to evidence, then to a gate made of deterministic checks and a Jev judge. Exit 0 means every requirement is met." width="100%">
+
 A [Hermes Agent](https://github.com/NousResearch/hermes-agent) skill that turns an intention into
 a finish line an agent can be held to, generates the prompt that starts the run, and then lets
 [Jev](https://typesafe.ai) decide whether the fuzzy requirements are really met.
@@ -136,6 +138,8 @@ to verify anything.
 
 ## The gate
 
+<img src="docs/gate.svg" alt="Layer 1 deterministic shell checks, layer 2 the run's evidence file, layer 3 one Jev call asking noul, score and choice. The verdict prints the numbers behind it." width="100%">
+
 Order of business, cheapest first:
 
 1. **Deterministic gates** (`gates` in the star): shell commands that exit 0 when a
@@ -216,6 +220,8 @@ next step rather than on a model's opinion about its own progress:
 
 ```
 SKILL.md                      the skill itself
+docs/hero.svg                 the banner above, drawn as SVG (no binary blobs)
+docs/gate.svg                 the gate diagram
 scripts/north_star.py         the CLI: set, check, prompt, evidence, gate
 scripts/jev_judge.py          the Jev judge: one System One call, three questions
 scripts/smoke_test.py         every claim above, asserted (77 checks, no key needed)
